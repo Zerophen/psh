@@ -1,5 +1,5 @@
 ################################
-# Locknet VM Setup Script v0.3 #
+# Locknet VM Setup Script v0.2 #
 # Server 2016 VM Setup         #
 # By AJ v1.0          #
 # 8/1/2019                     #
@@ -10,9 +10,7 @@ function Set-CentralStandardTime {
     Write-Host "Setting Time Zone to Central Standard Time"
     Set-TimeZone -Name "Central Standard Time"
 }
-function Create-Temp {
-    New-Item -Path "C:\" -Name "Temp" -ItemType "directory"
-}
+
 function Install-Netxus {
     Write-Host "Downloading Netxus Client"
     (New-Object System.Net.WebClient).DownloadFile("https://concord.centrastage.net/csm/profile/downloadAgent/fa2411cc-b990-4146-9d49-3bf2e865ed33", "C:\Users\Public\Downloads\Netxus.exe")
@@ -33,18 +31,16 @@ function Activate-Windows {
         Check-ActivationStatus
         If ($Global:LicenseStatus -ne 1) {
             $RecheckStatus = Read-Host "Windows Activation Unsuccessful. Recheck status? (y/n)"
-            } else {
+        } else {
             $RecheckStatus = "n"
         }
-        switch ($RecheckStatus) {
-            'y'{
-                Write-Host "Rechecking Status"
-            }
+        If ($RecheckStatus -eq 'y') {
+            Write-Host "Rechecking Status"
         }
     } until ($RecheckStatus -eq 'n')
     If ($Global:LicenseStatus -ne 1) {
         Write-Host "Windows Activation Unsuccessful. Continuing..." -ForegroundColor Red
-        } else {
+    } else {
         Write-Host "Windows Activation Successful" -ForegroundColor Green
     } 
 }
@@ -73,10 +69,7 @@ function Enable-RDP {
     Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\' -Name "fDenyTSConnections" -Value 0
     Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 }
-function Install-SPX {
-    Start-Process "https://storagecraft.com/downloads/trials-updates"
-    exit
-}
+
 function Disable-WindowsDefender {
     Write-Host "Disabling Windows Defender"
     Set-MpPreference -DisableRealtimeMonitoring $true
@@ -87,9 +80,7 @@ function Disable-WindowsFirewallAll {
     Write-Host "Disabling Windows Firewall"
     Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
 }
-function Change-DVDDriveToE {
-    Get-WmiObject -Class Win32_volume -Filter 'DriveType=5' | Select-Object -First 1 | Set-WmiInstance -Arguments @{DriveLetter='E:'}
-}
+
 function InstallWindowsUpdates {
     Install-Module PSWindowsUpdate -Force
     Add-WUServiceManager -ServiceID 7971f918-a847-4430-9279-4a52d1efe18d -confirm:$false
@@ -105,15 +96,15 @@ exit;
 
 # Create Temp folder
 If (!(Test-Path "C:\Temp")) {
-    Create-Temp
+    New-Item -Path "C:\" -Name "Temp" -ItemType "directory"
     Write-Host "Temp Folder Created" -ForegroundColor Green
-    } else {
+} else {
     Write-Host "Temp Folder Already Exists" -ForegroundColor Green
 }
 
 #Set DVD drive to the letter E:
-If  ((Get-WmiObject -Class Win32_volume -Filter 'DriveType=5' | Select-Object -First 1).DriveLetter -eq "E:") {
-    Change-DVDDriveToE
+If  ((Get-WmiObject -Class Win32_volume -Filter 'DriveType=5' | Select-Object -First 1).DriveLetter -ne "E:") {
+    Get-WmiObject -Class Win32_volume -Filter 'DriveType=5' | Select-Object -First 1 | Set-WmiInstance -Arguments @{DriveLetter='E:'}
     $DVDDrive = ((Get-WmiObject -Class Win32_volume -Filter 'DriveType=5' | Select-Object -First 1).DriveLetter -eq "E:")
     Write-Host "DVD drive is now set to E:" -ForegroundColor Green
 } else {
@@ -127,7 +118,7 @@ Write-Host "Disabled Server Manager from running on startup" -ForegroundColor Gr
 #Rename Server
 If ($env:computername -like '*WIN-*'){
     Rename-Server
-    } else {
+} else {
     Write-Host "Server Name has already been changed from the default" -ForegroundColor Green
  }
 
@@ -139,20 +130,19 @@ If (!($TimeZone -like 'Central Standard Time')) {
     If ($TimeZone -like 'Central Standard Time') {
         $TimeZone = 1
         Write-Host "Time Zone set to Central Standard Time" -ForegroundColor Green
-        } else {
+    } else {
         Write-Host "Failed to Set Time Zone to Central Standard Time" -ForegroundColor Red
     } 
-    } else {
-        Write-Host "Time Zone Already Set to Central Standard Time" -ForegroundColor Green
-        $TimeZone = 1
-       
+} else {
+    Write-Host "Time Zone Already Set to Central Standard Time" -ForegroundColor Green
+    $TimeZone = 1
 }
 
 # Install Netxus
 If (!(Test-Path "C:\Program Files (x86)\CentraStage\CagService.exe")) {
     Install-Netxus
     Read-Host -Prompt "Netxus Agent Installed. Connect to this server via Splashtop and press enter to continue"
-    } else {
+} else {
     Write-Host "Netxus Already Installed." -ForegroundColor Green
     # Need an unsuccessful install If here
 }
@@ -165,15 +155,14 @@ InstallWindowsUpdates
 Check-ActivationStatus
 If ($Global:LicenseStatus -ne 1) {
     Activate-Windows
-    } else {
+} else {
     Write-Host "Windows Already Activated" -ForegroundColor Green
-    
 }
 # Join to Domin
 $DomainJoined = (Get-WmiObject -Class Win32_ComputerSystem).PartOfDomain
 If ($DomainJoined -like 'False') {
     Join-Domain
-    } else {
+} else {
     Write-Host "Already Joined to Domain" -ForegroundColor Green
 }
 
@@ -182,7 +171,7 @@ $LocalAdminEnabled = (get-localuser -name administrator |fl enabled | out-string
 If ($LocalAdminEnabled -like '*True*') {
     Disable-LocalAdministrator
     $LocalAdminEnabled = (get-localuser -name administrator |fl enabled | out-string)
-    } else {
+} else {
     Write-Host "Local Admin Already Disabled" -ForegroundColor Green
 }
 
@@ -193,7 +182,7 @@ If ($IEESCEnabled -eq 1) {
     $IEESCEnabled = (Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}' -Name IsInstalled).IsInstalled
     Write-Host "IE Enhanced Security Configuration Disabled" -ForegroundColor Green
     #Need If Logic Here
-    } else {
+} else {
     Write-Host "IE Enhanced Security Configuration Already Disabled" -ForegroundColor Green
 }
 
@@ -204,14 +193,14 @@ If ($RDPDisabled -eq 1) {
     $RDPDisabled = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\' -Name fDenyTSConnections).fDenyTSConnections
     Write-Host "RDP Enabled" -ForegroundColor Green
     #Need If Logic Here
-    } else {
+} else {
     Write-Host "RDP Already Enabled" -ForegroundColor Green
 }
 
 # Install StorageCraft SPX
 If (!(Test-Path "C:\Program Files\StorageCraft\spx\spx_service.exe")) {
-    Install-SPX
-    } else {
+    Start-Process "https://storagecraft.com/downloads/trials-updates"
+} else {
     Write-Host "StorageCraft SPX Already Installed" -ForegroundColor Green
 }
 
@@ -225,7 +214,7 @@ If ($WDDRM -like 'False' -Or $WDMR -ne 0 -Or $WDSSC -ne 0) {
     $WDMR = (Get-MpPreference).MAPSReporting
     $WDSSC = (Get-MpPreference).SubmitSamplesConsent
     Write-Host "Windows Defender Disabled" -ForegroundColor Green
-    } else {
+} else {
     Write-Host "Windows Defender Already Disabled" -ForegroundColor Green
 }
 
@@ -239,14 +228,18 @@ If ($FWDomainEnabled -like 'True' -Or $FWPublicEnabled -like 'True' -Or $FWPriva
     $FWPublicEnabled = (get-netfirewallprofile -profile Public).Enabled
     $FWPrivateEnabled = (get-netfirewallprofile -profile Private).Enabled
     Write-Host "Windows Firewall Disabled" -ForegroundColor Green
-    } else {
+} else {
     Write-Host "Windows Firewall Already Disabled" -ForegroundColor Green
 }
 
 # Check All Scripts & Cleanup
-If($TimeZone -eq 1 -And (Test-Path "C:\Program Files (x86)\CentraStage\CagService.exe") -And ($Global:LicenseStatus -eq 1) -And ($DomainJoined -like 'True') -And ($LocalAdminEnabled -like "*False*") -And ($IEESCEnabled -eq 0) -And ($RDPDisabled -eq 0) -And (Test-Path "C:\Program Files\StorageCraft\spx\spx_service.exe") -And ($WDDRM -like 'True') -And ($WDMR -eq 0) -And ($WDSSC -eq 0) -And ($FWDomainEnabled -like 'False') -And ($FWPublicEnabled -like 'False') -And ($FWPrivateEnabled -like 'False') -And ($DVDDrive -like 'True')){
+If($TimeZone -eq 1 -And (Test-Path "C:\Program Files (x86)\CentraStage\CagService.exe") -And ($Global:LicenseStatus -eq 1) -And 
+    ($DomainJoined -like 'True') -And ($LocalAdminEnabled -like "*False*") -And ($IEESCEnabled -eq 0) -And ($RDPDisabled -eq 0) -And 
+    (Test-Path "C:\Program Files\StorageCraft\spx\spx_service.exe") -And ($WDDRM -like 'True') -And ($WDMR -eq 0) -And ($WDSSC -eq 0) -And 
+    ($FWDomainEnabled -like 'False') -And ($FWPublicEnabled -like 'False') -And ($FWPrivateEnabled -like 'False') -And ($DVDDrive -like 'True')){
+
     Write-Host "Final Checks Complete" -ForegroundColor Green
-    } else {
+} else {
     Write-Host "Failed Final Checks" -ForegroundColor Red
 }
 
