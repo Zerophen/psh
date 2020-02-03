@@ -60,11 +60,6 @@ function Join-Domain {
     exit
 }
 
-function Disable-LocalAdministrator {
-    Write-Host "Disabling Local Administrator"
-    Disable-LocalUser -Name "Administrator"
-}
-
 function Disable-IEESC {
     Write-Host "Disabling IE Enhanced Security Configuration (ESC)"
     Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}" -Name "IsInstalled" -Value 0
@@ -90,8 +85,8 @@ function Disable-WindowsFirewallAll {
 }
 
 function InstallWindowsUpdates {
-    Install-Module PSWindowsUpdate -Force
-    Add-WUServiceManager -ServiceID 7971f918-a847-4430-9279-4a52d1efe18d -confirm:$false
+    Install-Module PSWindowsUpdate -Force > $null
+    Add-WUServiceManager -ServiceID 7971f918-a847-4430-9279-4a52d1efe18d -confirm:$false > $null
     Get-WUInstall –MicrosoftUpdate –AcceptAll –AutoReboot -Install
  }
  
@@ -125,6 +120,7 @@ If  ((Get-WmiObject -Class Win32_volume -Filter 'DriveType=5' | Select-Object -F
     Write-Host "DVD drive is now set to E:" -ForegroundColor Green
 } else {
     Write-Host "DVD drive already set to E:" -ForegroundColor Green
+    $DVDDrive = ((Get-WmiObject -Class Win32_volume -Filter 'DriveType=5' | Select-Object -First 1).DriveLetter -eq "E:")
 }
 
 #Disable ServerManager
@@ -183,10 +179,11 @@ If ($DomainJoined -like 'False') {
 }
 
 # Disable Local Administrator
-$LocalAdminEnabled = (get-localuser -name administrator |fl enabled | out-string)
-If ($LocalAdminEnabled -like '*True*') {
-    Disable-LocalAdministrator
-    $LocalAdminEnabled = (get-localuser -name administrator |fl enabled | out-string)
+$global:LocalAdminEnabled = (get-localuser | where {$_.Description -eq 'Built-in account for administering the computer/domain'})
+If ($global:LocalAdminEnabled.Enabled -like '*True*') {
+    Write-Host "Disabling Local Administrator"
+    Disable-LocalUser ($global:LocalAdminEnabled.Name)
+    $global:LocalAdminEnabled = (get-localuser | where {$_.Description -eq 'Built-in account for administering the computer/domain'} |fl enabled | out-string)
 } else {
     Write-Host "Local Admin Already Disabled" -ForegroundColor Green
 }
@@ -249,7 +246,7 @@ If ($FWDomainEnabled -like 'True' -Or $FWPublicEnabled -like 'True' -Or $FWPriva
 }
 
 # Check All Scripts & Cleanup
-If($TimeZone -eq 1 -And (Test-Path "C:\Program Files (x86)\CentraStage\CagService.exe") -And ($Global:LicenseStatus -eq 1) -And 
+If($TimeZone -eq 1 -And (Test-Path "C:\Program Files (x86)\CentraStage\CagService.exe" -like 'True') -And ($Global:LicenseStatus -eq 1) -And 
     ($DomainJoined -like 'True') -And ($LocalAdminEnabled -like "*False*") -And ($IEESCEnabled -eq 0) -And ($RDPDisabled -eq 0) -And 
     (Test-Path "C:\Program Files\StorageCraft\spx\spx_service.exe") -And ($WDDRM -like 'True') -And ($WDMR -eq 0) -And ($WDSSC -eq 0) -And 
     ($FWDomainEnabled -like 'False') -And ($FWPublicEnabled -like 'False') -And ($FWPrivateEnabled -like 'False') -And ($DVDDrive -like 'True')){
