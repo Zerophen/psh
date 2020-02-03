@@ -5,10 +5,6 @@
 # 8/1/2019                     #
 ################################
 
-#Final Check variable
-$global:finalChecks = @()
-
-
 # Functions
 function Set-CentralStandardTime {
     Write-Host "Setting Time Zone to Central Standard Time"
