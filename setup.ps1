@@ -1,5 +1,5 @@
 ################################
-# Locknet VM Setup Script v0.2 #
+# Locknet VM Setup Script v0.4 #
 # Server 2016 VM Setup         #
 # By AJ v1.0          #
 # 8/1/2019                     #
@@ -108,7 +108,7 @@ If  ((Get-WmiObject -Class Win32_volume -Filter 'DriveType=5' | Select-Object -F
     $DVDDrive = ((Get-WmiObject -Class Win32_volume -Filter 'DriveType=5' | Select-Object -First 1).DriveLetter -eq "E:")
     Write-Host "DVD drive is now set to E:" -ForegroundColor Green
 } else {
-    Write-Host "DVD drive already set to E:" -ForegroundColor Red
+    Write-Host "DVD drive already set to E:" -ForegroundColor Green
 }
 
 #Disable ServerManager
