@@ -1,19 +1,26 @@
 ################################
-# Locknet VM Setup Script v0.2 #
+# Locknet VM Setup Script v0.3 #
 # Server 2016 VM Setup         #
 # By AJ v1.0          #
 # 8/1/2019                     #
 ################################
+
+#Final Check variable
+$global:finalChecks = @()
+
 
 # Functions
 function Set-CentralStandardTime {
     Write-Host "Setting Time Zone to Central Standard Time"
     Set-TimeZone -Name "Central Standard Time"
 }
+function Create-Temp {
+    New-Item -Path "C:\" -Name "Temp" -ItemType "directory"
+}
 function Install-Netxus {
     Write-Host "Downloading Netxus Client"
     (New-Object System.Net.WebClient).DownloadFile("https://concord.centrastage.net/csm/profile/downloadAgent/fa2411cc-b990-4146-9d49-3bf2e865ed33", "C:\Users\Public\Downloads\Netxus.exe")
-    Write-Host "Netxust Download Complete, Installing Netxus"
+    Write-Host "Netxus Download Complete, Installing Netxus"
     Start-Process -FilePath "C:\Users\Public\Downloads\Netxus.exe"
 }
 function Check-ActivationStatus {
@@ -45,6 +52,11 @@ function Activate-Windows {
         Write-Host "Windows Activation Successful" -ForegroundColor Green
     } 
 }
+function Rename-Server {
+    Write-Host "Rename the Server"
+    $NewServerName = Read-Host 'Enter new server name'   
+    Rename-Computer -NewName $NewServerName
+}
 function Join-Domain {
     Write-Host "Joining to Domain"
     $DomainName = Read-Host -Prompt 'Enter Domain Name'
@@ -66,7 +78,7 @@ function Enable-RDP {
     Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
 }
 function Install-SPX {
-    Start-Process "https://cloud.storagecraft.com/partners"
+    Start-Process "https://storagecraft.com/downloads/trials-updates"
     exit
 }
 function Disable-WindowsDefender {
@@ -79,6 +91,14 @@ function Disable-WindowsFirewallAll {
     Write-Host "Disabling Windows Firewall"
     Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
 }
+function Change-DVDDriveToE {
+    Get-WmiObject -Class Win32_volume -Filter 'DriveType=5' | Select-Object -First 1 | Set-WmiInstance -Arguments @{DriveLetter='E:'}
+}
+function InstallWindowsUpdates {
+    Install-Module PSWindowsUpdate -Force
+    Add-WUServiceManager -ServiceID 7971f918-a847-4430-9279-4a52d1efe18d -confirm:$false
+    Get-WUInstall –MicrosoftUpdate –AcceptAll –AutoReboot -Install
+ }
 # Script Start
 
 # Run As Administrator
@@ -87,13 +107,41 @@ Start-Process PowerShell -Verb RunAs "-NoProfile -ExecutionPolicy Bypass -Comman
 exit;
 }
 
+# Create Temp folder
+If (!(Test-Path "C:\Temp")) {
+    Create-Temp
+    Write-Host "Temp Folder Created" -ForegroundColor Green
+    } else {
+    Write-Host "Temp Folder Already Exists" -ForegroundColor Green
+}
+
+#Set DVD drive to the letter E:
+If  ((Get-WmiObject -Class Win32_volume -Filter 'DriveType=5' | Select-Object -First 1).DriveLetter -eq "E:") {
+    Change-DVDDriveToE
+    $DVDDrive = ((Get-WmiObject -Class Win32_volume -Filter 'DriveType=5' | Select-Object -First 1).DriveLetter -eq "E:")
+    Write-Host "DVD drive is now set to E:" -ForegroundColor Green
+} else {
+    Write-Host "DVD drive already set to E:" -ForegroundColor Red
+}
+
+#Disable ServerManager
+Get-ScheduledTask -TaskName ServerManager | Disable-ScheduledTask -Verbose
+Write-Host "Disabled Server Manager from running on startup" -ForegroundColor Green
+
+#Rename Server
+If ($env:computername -like '*WIN-*'){
+    Rename-Server
+    } else {
+    Write-Host "Server Name has already been changed from the default" -ForegroundColor Green
+ }
+
 # Set Timezone
 $TimeZone = [System.TimeZoneInfo]::local.StandardName
 If (!($TimeZone -like 'Central Standard Time')) {
     Set-CentralStandardTime
     $TimeZone = [System.TimeZoneInfo]::local.StandardName
     If ($TimeZone -like 'Central Standard Time') {
-	    $TimeZone = 1
+        $TimeZone = 1
         Write-Host "Time Zone set to Central Standard Time" -ForegroundColor Green
         } else {
         Write-Host "Failed to Set Time Zone to Central Standard Time" -ForegroundColor Red
@@ -101,6 +149,7 @@ If (!($TimeZone -like 'Central Standard Time')) {
     } else {
         Write-Host "Time Zone Already Set to Central Standard Time" -ForegroundColor Green
         $TimeZone = 1
+       
 }
 
 # Install Netxus
@@ -112,14 +161,18 @@ If (!(Test-Path "C:\Program Files (x86)\CentraStage\CagService.exe")) {
     # Need an unsuccessful install If here
 }
 
+#Install updates
+Write-Host "Installing Windows Updates"
+InstallWindowsUpdates
+
 # Activate Windows
 Check-ActivationStatus
 If ($Global:LicenseStatus -ne 1) {
     Activate-Windows
     } else {
     Write-Host "Windows Already Activated" -ForegroundColor Green
+    
 }
-
 # Join to Domin
 $DomainJoined = (Get-WmiObject -Class Win32_ComputerSystem).PartOfDomain
 If ($DomainJoined -like 'False') {
@@ -195,10 +248,10 @@ If ($FWDomainEnabled -like 'True' -Or $FWPublicEnabled -like 'True' -Or $FWPriva
 }
 
 # Check All Scripts & Cleanup
-If($TimeZone -eq 1 -And (Test-Path "C:\Program Files (x86)\CentraStage\CagService.exe") -And ($Global:LicenseStatus -eq 1) -And ($DomainJoined -like 'True') -And ($LocalAdminEnabled -like "*False*") -And ($IEESCEnabled -eq 0) -And ($RDPDisabled -eq 0) -And (Test-Path "C:\Program Files\StorageCraft\spx\spx_service.exe") -And ($WDDRM -like 'True') -And ($WDMR -eq 0) -And ($WDSSC -eq 0) -And ($FWDomainEnabled -like 'False') -And ($FWPublicEnabled -like 'False') -And ($FWPrivateEnabled -like 'False')){
+If($TimeZone -eq 1 -And (Test-Path "C:\Program Files (x86)\CentraStage\CagService.exe") -And ($Global:LicenseStatus -eq 1) -And ($DomainJoined -like 'True') -And ($LocalAdminEnabled -like "*False*") -And ($IEESCEnabled -eq 0) -And ($RDPDisabled -eq 0) -And (Test-Path "C:\Program Files\StorageCraft\spx\spx_service.exe") -And ($WDDRM -like 'True') -And ($WDMR -eq 0) -And ($WDSSC -eq 0) -And ($FWDomainEnabled -like 'False') -And ($FWPublicEnabled -like 'False') -And ($FWPrivateEnabled -like 'False') -And ($DVDDrive -like 'True')){
     Write-Host "Final Checks Complete" -ForegroundColor Green
     } else {
     Write-Host "Failed Final Checks" -ForegroundColor Red
 }
-Read-Host -Prompt "Press Enter to continue"
 
+Read-Host -Prompt "Press Enter to continue"
