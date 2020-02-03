@@ -104,7 +104,7 @@ If (!(Test-Path "C:\Temp")) {
 
 #Set DVD drive to the letter E:
 If  ((Get-WmiObject -Class Win32_volume -Filter 'DriveType=5' | Select-Object -First 1).DriveLetter -ne "E:") {
-    Get-WmiObject -Class Win32_volume -Filter 'DriveType=5' | Select-Object -First 1 | Set-WmiInstance -Arguments @{DriveLetter='E:'}
+    Get-WmiObject -Class Win32_volume -Filter 'DriveType=5' | Select-Object -First 1 | Set-WmiInstance -Arguments @{DriveLetter='E:'} > $null
     $DVDDrive = ((Get-WmiObject -Class Win32_volume -Filter 'DriveType=5' | Select-Object -First 1).DriveLetter -eq "E:")
     Write-Host "DVD drive is now set to E:" -ForegroundColor Green
 } else {
@@ -112,7 +112,7 @@ If  ((Get-WmiObject -Class Win32_volume -Filter 'DriveType=5' | Select-Object -F
 }
 
 #Disable ServerManager
-Get-ScheduledTask -TaskName ServerManager | Disable-ScheduledTask -Verbose
+Get-ScheduledTask -TaskName ServerManager | Disable-ScheduledTask -Verbose > $null
 Write-Host "Disabled Server Manager from running on startup" -ForegroundColor Green
 
 #Rename Server
