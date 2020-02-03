@@ -17,9 +17,11 @@ function Install-Netxus {
     Write-Host "Netxus Download Complete, Installing Netxus"
     Start-Process -FilePath "C:\Users\Public\Downloads\Netxus.exe"
 }
+
 function Check-ActivationStatus {
     $Global:LicenseStatus = (Get-CimInstance -ClassName SoftwareLicensingProduct -Filter "Name Like 'Windows%'" | where PartialProductKey).licensestatus   
 }
+
 function Activate-Windows {
     Write-Host "Activating Windows"
     $ComputerName = gc env:computername
@@ -44,26 +46,31 @@ function Activate-Windows {
         Write-Host "Windows Activation Successful" -ForegroundColor Green
     } 
 }
+
 function Rename-Server {
     Write-Host "Rename the Server"
     $NewServerName = Read-Host 'Enter new server name'   
     Rename-Computer -NewName $NewServerName
 }
+
 function Join-Domain {
     Write-Host "Joining to Domain"
     $DomainName = Read-Host -Prompt 'Enter Domain Name'
     Add-Computer -DomainName $DomainName -Restart
     exit
 }
+
 function Disable-LocalAdministrator {
     Write-Host "Disabling Local Administrator"
     Disable-LocalUser -Name "Administrator"
 }
+
 function Disable-IEESC {
     Write-Host "Disabling IE Enhanced Security Configuration (ESC)"
     Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}" -Name "IsInstalled" -Value 0
     Stop-Process -Name Explorer
 }
+
 function Enable-RDP {
     Write-Host "Enabling RDP and Firewall Rules"
     Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server\' -Name "fDenyTSConnections" -Value 0
@@ -76,6 +83,7 @@ function Disable-WindowsDefender {
     Set-MpPreference -MAPSReporting 0
     Set-MpPreference -SubmitSamplesConsent 0
 }
+
 function Disable-WindowsFirewallAll {
     Write-Host "Disabling Windows Firewall"
     Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
@@ -86,6 +94,14 @@ function InstallWindowsUpdates {
     Add-WUServiceManager -ServiceID 7971f918-a847-4430-9279-4a52d1efe18d -confirm:$false
     Get-WUInstall –MicrosoftUpdate –AcceptAll –AutoReboot -Install
  }
+ 
+ function InstallStorageCraftSPX {
+ Write-Host "Downloading ShadowProtect Client"
+    (New-Object System.Net.WebClient).DownloadFile("https://downloads.storagecraft.com/SP_Files/ShadowProtect_SPX-6.8.4-5_x64.msi", "C:\Temp\ShadowProtect.msi")
+    Write-Host "Download Complete, Installing ShadowProtect Client"
+    Start-Process -FilePath "C:\Temp\ShadowProtect.msi"
+}
+
 # Script Start
 
 # Run As Administrator
@@ -199,7 +215,7 @@ If ($RDPDisabled -eq 1) {
 
 # Install StorageCraft SPX
 If (!(Test-Path "C:\Program Files\StorageCraft\spx\spx_service.exe")) {
-    Start-Process "https://storagecraft.com/downloads/trials-updates"
+    InstallStorageCraftSPX
 } else {
     Write-Host "StorageCraft SPX Already Installed" -ForegroundColor Green
 }
