@@ -1,5 +1,5 @@
 ################################
-# Locknet VM Setup Script v0.4 #
+# Locknet VM Setup Script v0.5 #
 # Server 2016 VM Setup         #
 # By AJ v1.0          #
 # 8/1/2019                     #
@@ -150,18 +150,20 @@ If (!($TimeZone -like 'Central Standard Time')) {
     $TimeZone = 1
 }
 
+#Install updates
+Write-Host "Installing Windows Updates"
+InstallWindowsUpdates
+
 # Install Netxus
 If (!(Test-Path "C:\Program Files (x86)\CentraStage\CagService.exe")) {
     Install-Netxus
     Read-Host -Prompt "Netxus Agent Installed. Connect to this server via Splashtop and press enter to continue"
+    $dattoAgent = Test-Path "C:\Program Files (x86)\CentraStage\CagService.exe"
 } else {
     Write-Host "Netxus Already Installed." -ForegroundColor Green
+    $dattoAgent = Test-Path "C:\Program Files (x86)\CentraStage\CagService.exe"
     # Need an unsuccessful install If here
 }
-
-#Install updates
-Write-Host "Installing Windows Updates"
-InstallWindowsUpdates
 
 # Activate Windows
 Check-ActivationStatus
@@ -183,7 +185,7 @@ $global:LocalAdminEnabled = (get-localuser | where {$_.Description -eq 'Built-in
 If ($global:LocalAdminEnabled.Enabled -like '*True*') {
     Write-Host "Disabling Local Administrator"
     Disable-LocalUser ($global:LocalAdminEnabled.Name)
-    $global:LocalAdminEnabled = (get-localuser | where {$_.Description -eq 'Built-in account for administering the computer/domain'} |fl enabled | out-string)
+    $global:LocalAdminEnabled = (get-localuser | where {$_.Description -eq 'Built-in account for administering the computer/domain'})
 } else {
     Write-Host "Local Admin Already Disabled" -ForegroundColor Green
 }
@@ -213,8 +215,10 @@ If ($RDPDisabled -eq 1) {
 # Install StorageCraft SPX
 If (!(Test-Path "C:\Program Files\StorageCraft\spx\spx_service.exe")) {
     InstallStorageCraftSPX
+    $SPX = Test-Path "C:\Program Files\StorageCraft\spx\spx_service.exe"
 } else {
     Write-Host "StorageCraft SPX Already Installed" -ForegroundColor Green
+    $SPX = Test-Path "C:\Program Files\StorageCraft\spx\spx_service.exe"
 }
 
 # Disable Windows Defender
@@ -246,9 +250,9 @@ If ($FWDomainEnabled -like 'True' -Or $FWPublicEnabled -like 'True' -Or $FWPriva
 }
 
 # Check All Scripts & Cleanup
-If($TimeZone -eq 1 -And (Test-Path "C:\Program Files (x86)\CentraStage\CagService.exe" -like 'True') -And ($Global:LicenseStatus -eq 1) -And 
-    ($DomainJoined -like 'True') -And ($LocalAdminEnabled -like "*False*") -And ($IEESCEnabled -eq 0) -And ($RDPDisabled -eq 0) -And 
-    (Test-Path "C:\Program Files\StorageCraft\spx\spx_service.exe") -And ($WDDRM -like 'True') -And ($WDMR -eq 0) -And ($WDSSC -eq 0) -And 
+If($TimeZone -eq 1 -And ($dattoAgent -like 'True') -And ($Global:LicenseStatus -eq 1) -And 
+    ($DomainJoined -like 'True') -And ($global:LocalAdminEnabled.Enabled -like "*False*") -And ($IEESCEnabled -eq 0) -And ($RDPDisabled -eq 0) -And 
+    ($SPX -like 'True') -And ($WDDRM -like 'True') -And ($WDMR -eq 0) -And ($WDSSC -eq 0) -And 
     ($FWDomainEnabled -like 'False') -And ($FWPublicEnabled -like 'False') -And ($FWPrivateEnabled -like 'False') -And ($DVDDrive -like 'True')){
 
     Write-Host "Final Checks Complete" -ForegroundColor Green
