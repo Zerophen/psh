@@ -1,5 +1,5 @@
 ################################
-# Locknet VM Setup Script v0.5 #
+# Locknet VM Setup Script v0.4 #
 # Server 2016 VM Setup         #
 # By AJ v1.0          #
 # 8/1/2019                     #
@@ -85,10 +85,19 @@ function Disable-WindowsFirewallAll {
 }
 
 function InstallWindowsUpdates {
-    Install-Module PSWindowsUpdate -Force > $null
-    Add-WUServiceManager -ServiceID 7971f918-a847-4430-9279-4a52d1efe18d -confirm:$false > $null
-    Get-WUInstall –MicrosoftUpdate –AcceptAll –AutoReboot -Install
- }
+    If (Get-Module *PSWindowsUpdate* -ListAvailable)
+    {
+        Get-WUInstall –MicrosoftUpdate –AcceptAll –AutoReboot -Install
+    }
+    else 
+    {
+        Install-Module PSWindowsUpdate -Force > $null
+        Add-WUServiceManager -ServiceID 7971f918-a847-4430-9279-4a52d1efe18d -confirm:$false > $null
+        $global:updates = 2
+        $global:updates | Out-File -Filepath .\updates.txt
+        Get-WUInstall –MicrosoftUpdate –AcceptAll –AutoReboot -Install
+    }
+}
  
  function InstallStorageCraftSPX {
  Write-Host "Downloading ShadowProtect Client"
@@ -150,10 +159,6 @@ If (!($TimeZone -like 'Central Standard Time')) {
     $TimeZone = 1
 }
 
-#Install updates
-Write-Host "Installing Windows Updates"
-InstallWindowsUpdates
-
 # Install Netxus
 If (!(Test-Path "C:\Program Files (x86)\CentraStage\CagService.exe")) {
     Install-Netxus
@@ -165,6 +170,23 @@ If (!(Test-Path "C:\Program Files (x86)\CentraStage\CagService.exe")) {
     # Need an unsuccessful install If here
 }
 
+#Install updates
+If (Test-path .\updates.txt)
+{
+    $global:updates = (Get-Content .\updates.txt)
+    $global:updates--
+    If ($global:updates -gt 0)
+    {
+        Write-Host "Installing Windows Updates"
+        InstallWindowsUpdates
+    }
+    else
+    {
+        write-host "Updates are installed" -ForegroundColor Green
+    }
+}
+Write-Host "Installing Windows Updates"
+InstallWindowsUpdates
 # Activate Windows
 Check-ActivationStatus
 If ($Global:LicenseStatus -ne 1) {
@@ -185,9 +207,10 @@ $global:LocalAdminEnabled = (get-localuser | where {$_.Description -eq 'Built-in
 If ($global:LocalAdminEnabled.Enabled -like '*True*') {
     Write-Host "Disabling Local Administrator"
     Disable-LocalUser ($global:LocalAdminEnabled.Name)
-    $global:LocalAdminEnabled = (get-localuser | where {$_.Description -eq 'Built-in account for administering the computer/domain'})
+    $global:LocalAdminEnabled = (get-localuser | where {$_.Description -eq 'Built-in account for administering the computer/domain'} |fl enabled | out-string)
 } else {
     Write-Host "Local Admin Already Disabled" -ForegroundColor Green
+    $global:LocalAdminEnabled = (get-localuser | where {$_.Description -eq 'Built-in account for administering the computer/domain'} |fl enabled | out-string)
 }
 
 # Disable IE Enhanced Security Configuration
@@ -251,11 +274,12 @@ If ($FWDomainEnabled -like 'True' -Or $FWPublicEnabled -like 'True' -Or $FWPriva
 
 # Check All Scripts & Cleanup
 If($TimeZone -eq 1 -And ($dattoAgent -like 'True') -And ($Global:LicenseStatus -eq 1) -And 
-    ($DomainJoined -like 'True') -And ($global:LocalAdminEnabled.Enabled -like "*False*") -And ($IEESCEnabled -eq 0) -And ($RDPDisabled -eq 0) -And 
+    ($DomainJoined -like 'True') -And ($global:LocalAdminEnabled -like 'False') -And ($IEESCEnabled -eq 0) -And ($RDPDisabled -eq 0) -And 
     ($SPX -like 'True') -And ($WDDRM -like 'True') -And ($WDMR -eq 0) -And ($WDSSC -eq 0) -And 
     ($FWDomainEnabled -like 'False') -And ($FWPublicEnabled -like 'False') -And ($FWPrivateEnabled -like 'False') -And ($DVDDrive -like 'True')){
 
     Write-Host "Final Checks Complete" -ForegroundColor Green
+    Remove-Item -path .\updates.txt
 } else {
     Write-Host "Failed Final Checks" -ForegroundColor Red
 }
