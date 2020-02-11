@@ -1,14 +1,15 @@
 $dataDrives = @()
 $dataDrives = Get-PSDrive -PSProvider FileSystem | where {$_.Free -gt 0 -AND $_.Root -notlike "C:\"}
 $cDrives = Get-PSDrive -PSProvider FileSystem | where {$_.Root -like "C:\"}
-$transferFolders = $NULL
 $transferFolders = @()
 $newobj = @()
-$roboScripts = $NULL
 $roboScripts = @()
-$cSubFolders = $NULL
 $cSubFolders = @()
-#$i = 0
+
+If (Test-Path C:\Netxus\Robocopy_Scripts_DataDrives.txt)
+{
+    Remove-Item -Path C:\Netxus\Robocopy_Scripts_DataDrives.txt
+}
 
 $foldersToIgnore = @(
     'Program Files (x86)',
@@ -20,9 +21,7 @@ $foldersToIgnore = @(
     'Windows',
     'Netxus',
     'Dell')
-#$cFolderList = (Get-Childitem ('C:\' + $s) -directory | where {$foldersToIgnore -notcontains $s.Name})
-
-    #$cSubFolders += (Get-Childitem ('C:\' + $s) -directory | where {$foldersToIgnore -notcontains $s.Name}) 
+ 
 ForEach ($s in (Get-Childitem -path C:\ -Directory | where {$foldersToIgnore -notcontains $_.Name}))
 {
     $i = 0
@@ -48,13 +47,7 @@ ForEach ($s in (Get-Childitem -path C:\ -Directory | where {$foldersToIgnore -no
         $newobj | add-member -MemberType NoteProperty -Name DriveLetter -Value 'C'
         $transferFolders += $newobj
     }
-    #$newobj | add-member -MemberType NoteProperty -Name DriveLetter -Value 'C'
-    #$transferFolders += $newobj
-    
-     
-    
 }
-
 
 ForEach ($x in $dataDrives | where {$_.DisplayRoot -notlike "\\*"})
 {
@@ -107,5 +100,4 @@ ForEach ($x in $transferFolders)
 }
 $roboScripts | Format-List | Out-File C:\Netxus\Robocopy_Scripts_DataDrives.txt -Append
 Write-Host "Robocopy script document has been placed in C:\Netxus\Robocopy_Scripts.txt"
-Write-Host "Check the C: drive if there are any folders that need to be migrated, this checks all local drives other than C:"
 Read-Host -Prompt "Press Enter to continue"
