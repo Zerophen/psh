@@ -13,6 +13,9 @@ $cSubFolders = @()
 $foldersToIgnore = @(
     'Program Files (x86)',
     'Program Files',
+    'PerfLogs',
+    'Drivers',
+    'Users',
     'Temp',
     'Windows',
     'Netxus',
