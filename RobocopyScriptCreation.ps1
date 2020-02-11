@@ -1,12 +1,59 @@
 $dataDrives = @()
-$dataDrives = Get-PSDrive -PSProvider FileSystem | where {$_.Free -gt 0}
-
+$dataDrives = Get-PSDrive -PSProvider FileSystem | where {$_.Free -gt 0 -AND $_.Root -notlike "C:\"}
+$cDrives = Get-PSDrive -PSProvider FileSystem | where {$_.Root -like "C:\"}
+$transferFolders = $NULL
 $transferFolders = @()
 $newobj = @()
-
+$roboScripts = $NULL
 $roboScripts = @()
+$cSubFolders = $NULL
+$cSubFolders = @()
+#$i = 0
 
-ForEach ($x in $dataDrives)
+$foldersToIgnore = @(
+    'Program Files (x86)',
+    'Program Files',
+    'Temp',
+    'Windows',
+    'Netxus',
+    'Dell')
+#$cFolderList = (Get-Childitem ('C:\' + $s) -directory | where {$foldersToIgnore -notcontains $s.Name})
+
+    #$cSubFolders += (Get-Childitem ('C:\' + $s) -directory | where {$foldersToIgnore -notcontains $s.Name}) 
+ForEach ($s in (Get-Childitem -path C:\ -Directory | where {$foldersToIgnore -notcontains $_.Name}))
+{
+    $i = 0
+
+    
+    If ((Get-Childitem ('C:\' + $s) -directory).Count -gt 1)
+    {
+        ForEach ($subfolders in (Get-ChildItem ('C:\' + $s) -directory))
+        {
+            $newobj = New-Object -TypeName psobject
+            $newobj | add-member -MemberType NoteProperty -Name Folder -Value $s
+            $newobj | add-member -MemberType NoteProperty -Name SubFolder -Value (Get-ChildItem ('C:\' + $s) -Directory).Name[$i]
+            $newobj | add-member -MemberType NoteProperty -Name DriveLetter -Value 'C'
+            $transferFolders += $newobj
+            $i++
+        }
+    }
+    Else 
+    {
+        $newobj = New-Object -TypeName psobject
+        $newobj | add-member -MemberType NoteProperty -Name Folder -Value $s
+        $newobj | add-member -MemberType NoteProperty -Name SubFolder -Value (Get-ChildItem ('C:\' + $s) -Directory).Name
+        $newobj | add-member -MemberType NoteProperty -Name DriveLetter -Value 'C'
+        $transferFolders += $newobj
+    }
+    #$newobj | add-member -MemberType NoteProperty -Name DriveLetter -Value 'C'
+    #$transferFolders += $newobj
+    
+     
+    
+}
+
+
+ForEach ($x in $dataDrives | where {$_.DisplayRoot -notlike "\\*"})
 {
     $i = 0
 
@@ -36,15 +83,26 @@ else {
 
 ForEach ($x in $transferFolders)
 {
-    $roboCopySyncSwitches = '" /E /ZB /DCOPY:T /COPYALL ' + $IPG + ' /R:1 /W:1 /V /TEE /LOG:c:\netxus\Robocopy_' + $env:COMPUTERNAME + '_' + $x.Folder + '.log'
-    $roboCopyFinalizeSwitches = '" /mir /sec /DCOPY:T /COPYALL /R:1 /W:1 /V /TEE /LOG:c:\netxus\Robocopy_' + $env:COMPUTERNAME + '_' + $x.Folder + 'mir.log'
+    $roboCopySyncSwitches = '" /E /ZB /DCOPY:T /COPYALL /IPG:5 /R:1 /W:1 /V /TEE /LOG:c:\netxus\Robocopy_' + $env:COMPUTERNAME + '_' + $x.Folder + '.log'
+    $roboCopyFinalizeSwitches = '" /mir /sec /DCOPY:T /COPYALL /R:1 /W:1 /V /TEE /LOG:c:\netxus\Robocopy_' + $env:COMPUTERNAME + '_' + $x.Folder + '_mir.log'
     
     $newobj = New-Object -TypeName psobject
-    $newobj | add-member -MemberType NoteProperty -Name Sync -Value ('robocopy "\\' + $env:COMPUTERNAME + '\' + $x.DriveLetter + '$\' + $x.Folder + '" "' + $x.DriveLetter + ':\' + $x.Folder + $roboCopySyncSwitches)
-    $newobj | add-member -MemberType NoteProperty -Name Final -Value ('robocopy "\\' + $env:COMPUTERNAME + '\' + $x.DriveLetter + '$\' + $x.Folder + '" "' + $x.DriveLetter + ':\' + $x.Folder + $roboCopyFinalizeSwitches)
-    $roboScripts += $newobj
-    $roboScripts | Format-List | Out-File C:\Netxus\Robocopy_Scripts.txt -Append
+    
+    If ($x.DriveLetter -notlike "C")
+    {
+        $newobj | add-member -MemberType NoteProperty -Name Sync -Value ('robocopy "\\' + $env:COMPUTERNAME + '\' + $x.DriveLetter + '$\' + $x.Folder + '" "' + $x.DriveLetter + ':\' + $x.Folder + $roboCopySyncSwitches)
+        $newobj | add-member -MemberType NoteProperty -Name Final -Value ('robocopy "\\' + $env:COMPUTERNAME + '\' + $x.DriveLetter + '$\' + $x.Folder + '" "' + $x.DriveLetter + ':\' + $x.Folder + $roboCopyFinalizeSwitches)
+        $roboScripts += $newobj
+    }
+    Else
+    {
+        $newobj | add-member -MemberType NoteProperty -Name Sync -Value ('robocopy "\\' + $env:COMPUTERNAME + '\' + $x.DriveLetter + '$\' + $x.Folder + '\' + $x.SubFolder + '" "' + $x.DriveLetter + ':\' + $x.Folder + '\' + $x.SubFolder + $roboCopySyncSwitches)
+        $newobj | add-member -MemberType NoteProperty -Name Final -Value ('robocopy "\\' + $env:COMPUTERNAME + '\' + $x.DriveLetter + '$\' + $x.Folder + '\' + $x.SubFolder + '" "' + $x.DriveLetter + ':\' + $x.Folder + '\' + $x.SubFolder  + $roboCopyFinalizeSwitches)
+        $roboScripts += $newobj
+    }
+    
 }
+$roboScripts | Format-List | Out-File C:\Netxus\Robocopy_Scripts_DataDrives.txt -Append
 Write-Host "Robocopy script document has been placed in C:\Netxus\Robocopy_Scripts.txt"
 Write-Host "Check the C: drive if there are any folders that need to be migrated, this checks all local drives other than C:"
 Read-Host -Prompt "Press Enter to continue"
