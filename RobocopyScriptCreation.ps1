@@ -88,16 +88,17 @@ ForEach ($x in $transferFolders)
     {
         $newobj | add-member -MemberType NoteProperty -Name Sync -Value ('robocopy "\\' + $env:COMPUTERNAME + '\' + $x.DriveLetter + '$\' + $x.Folder + '" "' + $x.DriveLetter + ':\' + $x.Folder + $roboCopySyncSwitches)
         $newobj | add-member -MemberType NoteProperty -Name Final -Value ('robocopy "\\' + $env:COMPUTERNAME + '\' + $x.DriveLetter + '$\' + $x.Folder + '" "' + $x.DriveLetter + ':\' + $x.Folder + $roboCopyFinalizeSwitches)
-        $roboScripts += $newobj
+        $roboScriptsData += $newobj
     }
     Else
     {
         $newobj | add-member -MemberType NoteProperty -Name Sync -Value ('robocopy "\\' + $env:COMPUTERNAME + '\' + $x.DriveLetter + '$\' + $x.Folder + '\' + $x.SubFolder + '" "' + $x.DriveLetter + ':\' + $x.Folder + '\' + $x.SubFolder + $roboCopySyncSwitches)
         $newobj | add-member -MemberType NoteProperty -Name Final -Value ('robocopy "\\' + $env:COMPUTERNAME + '\' + $x.DriveLetter + '$\' + $x.Folder + '\' + $x.SubFolder + '" "' + $x.DriveLetter + ':\' + $x.Folder + '\' + $x.SubFolder  + $roboCopyFinalizeSwitches)
-        $roboScripts += $newobj
+        $roboScriptsC += $newobj
     }
     
 }
-$roboScripts | Format-List | Out-File C:\Netxus\Robocopy_Scripts_DataDrives.txt -Append
+$roboScriptsData | Format-List | Out-File C:\Netxus\Robocopy_Scripts_DataDrives.txt -Append
+$roboScriptC | Format-List | Out-File C:\Netxus\Robocopy_Scripts_C_Drive.txt -Append
 Write-Host "Robocopy script document has been placed in C:\Netxus\Robocopy_Scripts.txt"
 Read-Host -Prompt "Press Enter to continue"
