@@ -1,3 +1,16 @@
+#############################################################################################
+#   Robocopy creation script                                                                #
+#   
+#   This script will scan the C: drive and any extra local data drives for folders and      #
+#   create robocopy transfer strings that can be used to sync data.  This should be ran     #
+#   from the source server.  This will work propertly on PowerShell v5.                     #
+#   
+#   Written by Jason D                                                                      #
+#   v 1.0                                                                                   #
+#   2/15/2020                                                                               #
+#
+#############################################################################################
+
 $dataDrives = @()
 $dataDrives = Get-PSDrive -PSProvider FileSystem | where {$_.Free -gt 0 -AND $_.Root -notlike "C:\"}
 $cDrives = Get-PSDrive -PSProvider FileSystem | where {$_.Root -like "C:\"}
@@ -9,6 +22,7 @@ $cSubFolders = @()
 If (Test-Path C:\Netxus\Robocopy_Scripts_DataDrives.txt)
 {
     Remove-Item -Path C:\Netxus\Robocopy_Scripts_DataDrives.txt
+    Remove-Item -Path C:\Netxus\Robocopy_Scripts_C_Drive.txt
 }
 
 $foldersToIgnore = @(
@@ -19,7 +33,7 @@ $foldersToIgnore = @(
     'Users',
     'Temp',
     'Windows',
-    'Netxus',
+    'Intel',
     'Dell')
  
 ForEach ($s in (Get-Childitem -path C:\ -Directory | where {$foldersToIgnore -notcontains $_.Name}))
