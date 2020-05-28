@@ -20,5 +20,5 @@ foreach ($ADGroup in $ADGroups)
         #$i++
     } 
 }
- $CSVData  | Sort-Object Name | Export-Csv $CSVFile -NoTypeInformation 
+ $CSVData  | Sort-Object Name,Members | Export-Csv $CSVFile -NoTypeInformation 
     #$newobj | add-member -MemberType NoteProperty -Name $t -Value  $currentUserProperties.$t
