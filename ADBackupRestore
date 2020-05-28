@@ -115,7 +115,7 @@ function RestoreAttributes
     }
 }
 
-If ($backupModify -eq 1)
+If ($backupRestore -eq 1)
 {
     BackupAttributes
 }
